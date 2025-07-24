@@ -773,24 +773,20 @@ AppManager.prototype.setupEulerEntities = function() {
         this.app.root.addChild(audioEntity);
     }
     
-    // Camera Entity (only if not in Viverse)
+    // Camera Entity (solo si no existe y no en Viverse)
     if (!this.runningInViverse) {
         let cameraEntity = this.app.root.findByName('Camera');
         if (!cameraEntity) {
-            console.log("Creating Camera entity");
+            console.log('Creating Camera entity');
             cameraEntity = new pc.Entity('Camera');
             cameraEntity.addComponent('camera');
             cameraEntity.addComponent('script');
-            
-            // Add eulerCameraController script
-            try {
-                cameraEntity.script.create('eulerCameraController');
-                console.log("✅ Added eulerCameraController script to Camera");
-            } catch (error) {
-                console.error("❌ Failed to add eulerCameraController script:", error);
-            }
-            
+            cameraEntity.script.create('mainCameraController');
             this.app.root.addChild(cameraEntity);
+        } else if (!cameraEntity.script || !cameraEntity.script.mainCameraController) {
+            if (!cameraEntity.script) cameraEntity.addComponent('script');
+            cameraEntity.script.create('mainCameraController');
+            console.log('mainCameraController agregado a cámara existente');
         }
     }
     
@@ -872,12 +868,12 @@ AppManager.prototype.enableEulerMode = function() {
     if (cameraEntity && !this.runningInViverse) {
         cameraEntity.enabled = true;
         // Force re-initialize the script
-        if (cameraEntity.script && cameraEntity.script.eulerCameraController) {
+        if (cameraEntity.script && cameraEntity.script.mainCameraController) {
             try {
-                console.log("🔄 Re-initializing eulerCameraController");
-                cameraEntity.script.eulerCameraController.initialize();
+                console.log("🔄 Re-initializing mainCameraController");
+                cameraEntity.script.mainCameraController.initialize();
             } catch (error) {
-                console.error("❌ Error re-initializing eulerCameraController:", error);
+                console.error("❌ Error re-initializing mainCameraController:", error);
             }
         }
         console.log("✅ Camera enabled");

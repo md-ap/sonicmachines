@@ -1,79 +1,95 @@
-var EulerCameraController = pc.createScript('eulerCameraController');
+// Main Camera Controller - Unificado para Euler y Marching Cubes
+var MainCameraController = pc.createScript('mainCameraController');
 
-// Add script attributes for editor configuration
-EulerCameraController.attributes.add('distance', { type: 'number', default: 35, title: 'Distance' });
-EulerCameraController.attributes.add('rotateSpeed', { type: 'number', default: 0.3, title: 'Rotate Speed' });
-EulerCameraController.attributes.add('zoomSpeed', { type: 'number', default: 2.0, title: 'Zoom Speed' });
-EulerCameraController.attributes.add('minDistance', { type: 'number', default: 10, title: 'Min Distance' });
-EulerCameraController.attributes.add('maxDistance', { type: 'number', default: 100, title: 'Max Distance' });
+// Atributos configurables
+MainCameraController.attributes.add('eulerDistance', { type: 'number', default: 35, title: 'Euler Distance' });
+MainCameraController.attributes.add('marchingCubesDistance', { type: 'number', default: 8, title: 'Marching Cubes Distance' });
+MainCameraController.attributes.add('rotateSpeed', { type: 'number', default: 0.3, title: 'Rotate Speed' });
+MainCameraController.attributes.add('zoomSpeed', { type: 'number', default: 2.0, title: 'Zoom Speed' });
+MainCameraController.attributes.add('minDistance', { type: 'number', default: 5, title: 'Min Distance' });
+MainCameraController.attributes.add('maxDistance', { type: 'number', default: 100, title: 'Max Distance' });
 
-// Initialize code called once per entity
-EulerCameraController.prototype.initialize = function() {
-    console.log("Euler Camera Controller initialized");
+MainCameraController.prototype.initialize = function() {
+    console.log("📷 Main Camera Controller initialized");
     
-    // Always initialize camera controls - mode checking happens in update loop
-    // This ensures camera is always ready when Euler mode activates
-    
-    // Camera state
+    // Estado de cámara
     this.pitch = 0;
     this.yaw = 0;
-    this.currentDistance = this.distance;
-    
-    // Target values for smooth interpolation
+    this.currentDistance = this.getDefaultDistance();
     this.targetPitch = 0;
     this.targetYaw = 0;
-    this.targetDistance = this.distance;
-    
-    // Mouse state
+    this.targetDistance = this.getDefaultDistance();
     this.isRotating = false;
     this.lastMouseX = 0;
     this.lastMouseY = 0;
-    
-    // Touch state for mobile
     this.isTouching = false;
     this.lastTouchX = 0;
     this.lastTouchY = 0;
     this.lastTouchDistance = 0;
-    
-    // Keyboard state for Viverse compatibility
-    this.keys = {
-        w: false,
-        a: false,
-        s: false,
-        d: false,
-        q: false,
-        e: false
-    };
-    
-    // Movement speed for keyboard controls
+    this.keys = { w: false, a: false, s: false, d: false, q: false, e: false };
     this.moveSpeed = 10.0;
-    this.keyboardRotateSpeed = 60.0; // degrees per second
-    
-    // UI blocking flag
+    this.keyboardRotateSpeed = 60.0;
     this.uiBlocked = false;
-    
-    // Target to look at (center of particle system)
     this.target = new pc.Vec3(0, 0, 0);
-    
-    // Setup event listeners
-    console.log("🎮 Setting up camera event listeners...");
-    this.setupEventListeners();
-    
-    // Set initial camera position
-    console.log("📷 Setting initial camera position...");
-    this.updateCameraPosition();
-    
-    // Start with automatic rotation like the original
     this.autoRotate = true;
-    this.autoRotateSpeed = 1.0; // degrees per frame (increased for visibility)
+    this.autoRotateSpeed = 1.0;
+    this.lastMode = null;
     
-    console.log("✅ Euler camera controller setup complete");
+    this.setupEventListeners();
+    this.updateCameraForMode();
+    
+    console.log("✅ Main Camera Controller setup complete");
 };
 
-// Setup event listeners
-EulerCameraController.prototype.setupEventListeners = function() {
+MainCameraController.prototype.getDefaultDistance = function() {
+    const appManager = this.app.root.findByName('AppManager');
+    if (appManager && appManager.script && appManager.script.AppManager) {
+        const mode = appManager.script.AppManager.currentMode;
+        if (mode === 'euler') return this.eulerDistance;
+        if (mode === 'marchingCubes') return this.marchingCubesDistance;
+    }
+    return this.eulerDistance;
+};
+
+MainCameraController.prototype.updateCameraForMode = function() {
+    const appManager = this.app.root.findByName('AppManager');
+    let mode = 'euler';
+    if (appManager && appManager.script && appManager.script.AppManager) {
+        mode = appManager.script.AppManager.currentMode;
+    }
+    
+    if (mode !== this.lastMode) {
+        console.log(`📷 Switching camera to ${mode} mode`);
+        
+        if (mode === 'euler') {
+            this.target.set(0, 0, 0);
+            this.targetDistance = this.eulerDistance;
+            this.currentDistance = this.eulerDistance;
+            this.pitch = 0;
+            this.yaw = 0;
+            this.entity.setPosition(0, 0, this.eulerDistance);
+            this.entity.setEulerAngles(0, 0, 0);
+            this.entity.lookAt(this.target);
+            console.log(`📷 Camera positioned for Euler mode at distance ${this.eulerDistance}`);
+        } else if (mode === 'marchingCubes') {
+            this.target.set(0, 0, 0);
+            this.targetDistance = this.marchingCubesDistance;
+            this.currentDistance = this.marchingCubesDistance;
+            this.pitch = 0;
+            this.yaw = 0;
+            this.entity.setPosition(0, 2, this.marchingCubesDistance);
+            this.entity.setEulerAngles(0, 0, 0);
+            this.entity.lookAt(this.target);
+            console.log(`📷 Camera positioned for Marching Cubes mode at distance ${this.marchingCubesDistance}`);
+        }
+        this.lastMode = mode;
+    }
+};
+
+MainCameraController.prototype.setupEventListeners = function() {
     try {
-        console.log("🎮 Binding event handlers...");
+        console.log("🎮 Setting up camera event listeners...");
+        
         // Mouse events
         this.onMouseDown = this._onMouseDown.bind(this);
         this.onMouseUp = this._onMouseUp.bind(this);
@@ -89,19 +105,16 @@ EulerCameraController.prototype.setupEventListeners = function() {
         this.onKeyDown = this._onKeyDown.bind(this);
         this.onKeyUp = this._onKeyUp.bind(this);
         
-        console.log("🖱️ Adding mouse event listeners...");
-        // Add event listeners with passive options
+        // Add event listeners
         window.addEventListener('mousedown', this.onMouseDown, { passive: false });
         window.addEventListener('mouseup', this.onMouseUp, { passive: false });
         window.addEventListener('mousemove', this.onMouseMove, { passive: false });
         window.addEventListener('wheel', this.onMouseWheel, { passive: false });
         
-        console.log("👆 Adding touch event listeners...");
         window.addEventListener('touchstart', this.onTouchStart, { passive: false });
         window.addEventListener('touchend', this.onTouchEnd, { passive: false });
         window.addEventListener('touchmove', this.onTouchMove, { passive: false });
         
-        console.log("⌨️ Adding keyboard event listeners...");
         window.addEventListener('keydown', this.onKeyDown, { passive: false });
         window.addEventListener('keyup', this.onKeyUp, { passive: false });
         
@@ -115,8 +128,7 @@ EulerCameraController.prototype.setupEventListeners = function() {
 };
 
 // Mouse event handlers
-EulerCameraController.prototype._onMouseDown = function(event) {
-    // Check if mouse is over UI elements directly (but not the main PlayCanvas canvas)
+MainCameraController.prototype._onMouseDown = function(event) {
     const elementUnderMouse = document.elementFromPoint(event.clientX, event.clientY);
     const isOverUI = elementUnderMouse && (
         elementUnderMouse.closest('.lil-gui') || 
@@ -126,36 +138,22 @@ EulerCameraController.prototype._onMouseDown = function(event) {
           elementUnderMouse.style.zIndex > 1000))
     );
     
-            // console.log(`🔍 Element under mouse: ${elementUnderMouse?.tagName}, id: ${elementUnderMouse?.id}, class: ${elementUnderMouse?.className}`); // Commented to reduce console spam
-        
-        // console.log(`🖱️ Mouse down: button=${event.button}, uiBlocked=${this.uiBlocked}, isOverUI=${isOverUI}`); // Commented to reduce console spam
-    
-    // Allow rotation if not over UI elements and correct button
-    if (!isOverUI && (event.button === 0 || event.button === 2)) { // Left or right mouse button
-                        // console.log("✅ Starting camera rotation"); // Commented to reduce console spam
+    if (!isOverUI && (event.button === 0 || event.button === 2)) {
         this.isRotating = true;
         this.lastMouseX = event.clientX;
         this.lastMouseY = event.clientY;
         event.preventDefault();
-    } else {
-                    // console.log("❌ Mouse input blocked - over UI or wrong button"); // Commented to reduce console spam
     }
 };
 
-EulerCameraController.prototype._onMouseUp = function(event) {
-            // console.log("🖱️ Mouse up - stopping rotation"); // Commented to reduce console spam
+MainCameraController.prototype._onMouseUp = function(event) {
     this.isRotating = false;
 };
 
-EulerCameraController.prototype._onMouseMove = function(event) {
+MainCameraController.prototype._onMouseMove = function(event) {
     if (this.isRotating) {
         const deltaX = event.clientX - this.lastMouseX;
         const deltaY = event.clientY - this.lastMouseY;
-        
-        // Only log if there's significant movement to avoid spam
-        if (Math.abs(deltaX) > 2 || Math.abs(deltaY) > 2) {
-            // console.log(`🔄 Camera rotating: deltaX=${deltaX}, deltaY=${deltaY}`); // Commented to reduce console spam
-        }
         
         this.targetYaw -= deltaX * this.rotateSpeed * 0.2;
         this.targetPitch -= deltaY * this.rotateSpeed * 0.2;
@@ -168,7 +166,7 @@ EulerCameraController.prototype._onMouseMove = function(event) {
     }
 };
 
-EulerCameraController.prototype._onMouseWheel = function(event) {
+MainCameraController.prototype._onMouseWheel = function(event) {
     const delta = event.deltaY > 0 ? 1 : -1;
     this.targetDistance += delta * this.zoomSpeed;
     this.targetDistance = Math.max(this.minDistance, Math.min(this.maxDistance, this.targetDistance));
@@ -176,14 +174,12 @@ EulerCameraController.prototype._onMouseWheel = function(event) {
 };
 
 // Touch event handlers
-EulerCameraController.prototype._onTouchStart = function(event) {
+MainCameraController.prototype._onTouchStart = function(event) {
     if (event.touches.length === 1) {
-        // Single touch - rotation
         this.isTouching = true;
         this.lastTouchX = event.touches[0].clientX;
         this.lastTouchY = event.touches[0].clientY;
     } else if (event.touches.length === 2) {
-        // Two finger touch - zoom
         const touch1 = event.touches[0];
         const touch2 = event.touches[1];
         const dx = touch1.clientX - touch2.clientX;
@@ -193,26 +189,23 @@ EulerCameraController.prototype._onTouchStart = function(event) {
     event.preventDefault();
 };
 
-EulerCameraController.prototype._onTouchEnd = function(event) {
+MainCameraController.prototype._onTouchEnd = function(event) {
     this.isTouching = false;
 };
 
-EulerCameraController.prototype._onTouchMove = function(event) {
+MainCameraController.prototype._onTouchMove = function(event) {
     if (event.touches.length === 1 && this.isTouching) {
-        // Single touch - rotation
         const deltaX = event.touches[0].clientX - this.lastTouchX;
         const deltaY = event.touches[0].clientY - this.lastTouchY;
         
         this.targetYaw -= deltaX * this.rotateSpeed * 0.3;
         this.targetPitch -= deltaY * this.rotateSpeed * 0.3;
         
-        // Clamp pitch
         this.targetPitch = Math.max(-89, Math.min(89, this.targetPitch));
         
         this.lastTouchX = event.touches[0].clientX;
         this.lastTouchY = event.touches[0].clientY;
     } else if (event.touches.length === 2) {
-        // Two finger touch - zoom
         const touch1 = event.touches[0];
         const touch2 = event.touches[1];
         const dx = touch1.clientX - touch2.clientX;
@@ -231,26 +224,25 @@ EulerCameraController.prototype._onTouchMove = function(event) {
 };
 
 // Keyboard event handlers
-EulerCameraController.prototype._onKeyDown = function(event) {
+MainCameraController.prototype._onKeyDown = function(event) {
     const key = event.key.toLowerCase();
     if (this.keys.hasOwnProperty(key)) {
         this.keys[key] = true;
         event.preventDefault();
     }
     
-    // Additional keyboard shortcuts
     switch(key) {
-        case 'home': // Reset camera
+        case 'home':
             this.resetCamera();
             event.preventDefault();
             break;
         case '+':
-        case '=': // Zoom in
+        case '=':
             this.targetDistance -= this.zoomSpeed;
             this.targetDistance = Math.max(this.minDistance, this.targetDistance);
             event.preventDefault();
             break;
-        case '-': // Zoom out
+        case '-':
             this.targetDistance += this.zoomSpeed;
             this.targetDistance = Math.min(this.maxDistance, this.targetDistance);
             event.preventDefault();
@@ -258,7 +250,7 @@ EulerCameraController.prototype._onKeyDown = function(event) {
     }
 };
 
-EulerCameraController.prototype._onKeyUp = function(event) {
+MainCameraController.prototype._onKeyUp = function(event) {
     const key = event.key.toLowerCase();
     if (this.keys.hasOwnProperty(key)) {
         this.keys[key] = false;
@@ -266,31 +258,26 @@ EulerCameraController.prototype._onKeyUp = function(event) {
     }
 };
 
-// Reset camera to default position
-EulerCameraController.prototype.resetCamera = function() {
+MainCameraController.prototype.resetCamera = function() {
     this.targetPitch = 0;
     this.targetYaw = 0;
-    this.targetDistance = this.distance;
-    console.log('Camera reset to default position');
+    this.targetDistance = this.getDefaultDistance();
+    console.log('📷 Camera reset to default position');
 };
 
-// Update camera position based on keyboard input
-EulerCameraController.prototype.updateKeyboardMovement = function(dt) {
-    // WASD movement (relative to camera orientation)
+MainCameraController.prototype.updateKeyboardMovement = function(dt) {
     let moveX = 0;
     let moveY = 0;
     let moveZ = 0;
     
-    if (this.keys.w) moveZ -= 1; // Forward
-    if (this.keys.s) moveZ += 1; // Backward
-    if (this.keys.a) moveX -= 1; // Left
-    if (this.keys.d) moveX += 1; // Right
-    if (this.keys.q) moveY -= 1; // Down
-    if (this.keys.e) moveY += 1; // Up
+    if (this.keys.w) moveZ -= 1;
+    if (this.keys.s) moveZ += 1;
+    if (this.keys.a) moveX -= 1;
+    if (this.keys.d) moveX += 1;
+    if (this.keys.q) moveY -= 1;
+    if (this.keys.e) moveY += 1;
     
-    // Apply movement
     if (moveX !== 0 || moveY !== 0 || moveZ !== 0) {
-        // Get camera's forward, right, and up vectors
         const forward = new pc.Vec3();
         const right = new pc.Vec3();
         const up = new pc.Vec3();
@@ -299,32 +286,21 @@ EulerCameraController.prototype.updateKeyboardMovement = function(dt) {
         this.entity.getRight(right);
         this.entity.getUp(up);
         
-        // Calculate movement vector
         const movement = new pc.Vec3();
         movement.add(right.clone().scale(moveX * this.moveSpeed * dt));
         movement.add(up.clone().scale(moveY * this.moveSpeed * dt));
         movement.add(forward.clone().scale(moveZ * this.moveSpeed * dt));
         
-        // Update target position
         this.target.add(movement);
     }
 };
 
-// Update camera position
-EulerCameraController.prototype.updateCameraPosition = function() {
-    // Smooth interpolation
+MainCameraController.prototype.updateCameraPosition = function() {
     const lerpFactor = 0.1;
-    const oldYaw = this.yaw;
     this.pitch = pc.math.lerp(this.pitch, this.targetPitch, lerpFactor);
     this.yaw = pc.math.lerp(this.yaw, this.targetYaw, lerpFactor);
     this.currentDistance = pc.math.lerp(this.currentDistance, this.targetDistance, lerpFactor);
     
-    // Debug significant camera changes
-    if (Math.abs(this.yaw - oldYaw) > 0.1) {
-        console.log(`📷 Camera position updated: yaw=${this.yaw.toFixed(1)}, distance=${this.currentDistance.toFixed(1)}`);
-    }
-    
-    // Convert spherical coordinates to Cartesian
     const pitchRad = this.pitch * pc.math.DEG_TO_RAD;
     const yawRad = this.yaw * pc.math.DEG_TO_RAD;
     
@@ -332,23 +308,19 @@ EulerCameraController.prototype.updateCameraPosition = function() {
     const y = this.currentDistance * Math.sin(pitchRad);
     const z = this.currentDistance * Math.cos(pitchRad) * Math.cos(yawRad);
     
-    // Set camera position relative to target
     this.entity.setPosition(
         this.target.x + x,
         this.target.y + y,
         this.target.z + z
     );
     
-    // Look at target
     this.entity.lookAt(this.target);
 };
 
-// Get camera info for audio feedback
-EulerCameraController.prototype.getCameraInfo = function() {
+MainCameraController.prototype.getCameraInfo = function() {
     const position = this.entity.getPosition();
     const distance = position.distance(this.target);
     
-    // Calculate azimuth and elevation
     const direction = new pc.Vec3();
     direction.sub2(position, this.target).normalize();
     
@@ -364,45 +336,32 @@ EulerCameraController.prototype.getCameraInfo = function() {
     };
 };
 
-// Update function called every frame
-EulerCameraController.prototype.update = function(dt) {
-    // Check if we should run (only when euler mode is active)
+MainCameraController.prototype.update = function(dt) {
     const appManager = this.app.root.findByName('AppManager');
+    let mode = 'euler';
     if (appManager && appManager.script && appManager.script.AppManager) {
-        const currentMode = appManager.script.AppManager.currentMode;
-        if (currentMode !== 'euler') {
-            // Don't update camera when not in euler mode
-            return;
-        }
+        mode = appManager.script.AppManager.currentMode;
     }
     
-    // Auto rotation when not manually controlling
-    if (!this.isRotating && !this.isTouching) {
-        this.targetYaw += this.autoRotateSpeed * this.rotateSpeed;
-        // Debug auto-rotation occasionally
-        if (Math.floor(Date.now() / 1000) % 5 === 0 && Date.now() % 1000 < 20) {
-            // console.log(`🔄 Auto-rotating: targetYaw=${this.targetYaw.toFixed(1)}, currentYaw=${this.yaw.toFixed(1)}`); // Commented to reduce console spam
+    this.updateCameraForMode();
+    
+    if (mode === 'euler' || mode === 'marchingCubes') {
+        if (!this.isRotating && !this.isTouching && this.autoRotate) {
+            this.targetYaw += this.autoRotateSpeed * this.rotateSpeed;
         }
+        this.updateKeyboardMovement(dt);
+        this.updateCameraPosition();
     }
-    
-    // Update keyboard movement
-    this.updateKeyboardMovement(dt);
-    
-    // Update camera position
-    this.updateCameraPosition();
     
     // Send camera info to audio manager for spatial audio
     const audioEntity = this.app.root.findByName('AudioEntity');
     if (audioEntity && audioEntity.script.eulerAudioManager) {
         const cameraInfo = this.getCameraInfo();
-        // You can extend the audio manager to use camera info for spatial audio
         // audioEntity.script.eulerAudioManager.updateCameraInfo(cameraInfo);
     }
 };
 
-// Clean up when script is destroyed
-EulerCameraController.prototype.destroy = function() {
-    // Remove event listeners
+MainCameraController.prototype.destroy = function() {
     window.removeEventListener('mousedown', this.onMouseDown, { passive: false });
     window.removeEventListener('mouseup', this.onMouseUp, { passive: false });
     window.removeEventListener('mousemove', this.onMouseMove, { passive: false });
