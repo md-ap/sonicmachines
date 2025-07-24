@@ -2,8 +2,9 @@
 var MainCameraController = pc.createScript('mainCameraController');
 
 // Atributos configurables
-MainCameraController.attributes.add('eulerDistance', { type: 'number', default: 35, title: 'Euler Distance' });
-MainCameraController.attributes.add('marchingCubesDistance', { type: 'number', default: 8, title: 'Marching Cubes Distance' });
+MainCameraController.attributes.add('eulerDistance', { type: 'number', default: 50, title: 'Euler Distance' });
+MainCameraController.attributes.add('marchingCubesDistance', { type: 'number', default: 6, title: 'Marching Cubes Distance' });
+MainCameraController.attributes.add('homeDistance', { type: 'number', default: 20, title: 'Home Distance' });
 MainCameraController.attributes.add('rotateSpeed', { type: 'number', default: 0.3, title: 'Rotate Speed' });
 MainCameraController.attributes.add('zoomSpeed', { type: 'number', default: 2.0, title: 'Zoom Speed' });
 MainCameraController.attributes.add('minDistance', { type: 'number', default: 5, title: 'Min Distance' });
@@ -66,27 +67,42 @@ MainCameraController.prototype.updateCameraForMode = function() {
         console.log(`📷 Switching camera to ${mode} mode`);
         
         if (mode === 'euler') {
+            // Euler mode - use farther distance for better view of the network (50 units)
             this.target.set(0, 0, 0);
-            this.targetDistance = this.eulerDistance;
+            this.targetDistance = this.eulerDistance; // 50 units
             this.currentDistance = this.eulerDistance;
             this.pitch = 0;
             this.yaw = 0;
             this.entity.setPosition(0, 0, this.eulerDistance);
             this.entity.setEulerAngles(0, 0, 0);
-            this.entity.lookAt(this.target);
-            console.log(`📷 Camera positioned for Euler mode at distance ${this.eulerDistance}`);
+            this.entity.lookAt(0, 0, 0);
+            console.log(`📷 Euler camera positioned at distance: ${this.eulerDistance}`);
         } else if (mode === 'marchingCubes') {
+            // MarchingCubes mode - use closer distance and elevated view for blobs (6 units)
             this.target.set(0, 0, 0);
-            this.targetDistance = this.marchingCubesDistance;
+            this.targetDistance = this.marchingCubesDistance; // 6 units
             this.currentDistance = this.marchingCubesDistance;
+            this.pitch = -10; // Slight downward angle
+            this.yaw = 0;
+            this.entity.setPosition(0, 2, this.marchingCubesDistance); // Elevated Y position
+            this.entity.setEulerAngles(-10, 0, 0);
+            this.entity.lookAt(0, 0, 0);
+            console.log(`📷 MarchingCubes camera positioned at distance: ${this.marchingCubesDistance}, elevated`);
+        } else {
+            // Home mode - medium distance
+            this.target.set(0, 0, 0);
+            this.targetDistance = this.homeDistance; // 20 units
+            this.currentDistance = this.homeDistance;
             this.pitch = 0;
             this.yaw = 0;
-            this.entity.setPosition(0, 2, this.marchingCubesDistance);
+            this.entity.setPosition(0, 0, this.homeDistance);
             this.entity.setEulerAngles(0, 0, 0);
-            this.entity.lookAt(this.target);
-            console.log(`📷 Camera positioned for Marching Cubes mode at distance ${this.marchingCubesDistance}`);
+            this.entity.lookAt(0, 0, 0);
+            console.log(`📷 Home camera positioned at distance: ${this.homeDistance}`);
         }
+        
         this.lastMode = mode;
+        console.log(`✅ Camera updated for ${mode} mode`);
     }
 };
 

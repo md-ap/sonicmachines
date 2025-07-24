@@ -20,7 +20,20 @@ EulerUIController.prototype.initialize = function() {
     // Find other components
     this.simulationEntity = this.app.root.findByName('EulerContainer');
     this.audioEntity = this.app.root.findByName('AudioEntity');
-    this.cameraEntity = this.app.root.findByName('Camera');
+    
+    // Find camera entity more robustly
+    this.cameraEntity = this.app.root.findByName('Camera') || this.app.root.findByName('MainCamera');
+    if (!this.cameraEntity) {
+        // Try to find any entity with a camera component
+        const entities = this.app.root.find('*');
+        for (let i = 0; i < entities.length; i++) {
+            if (entities[i].camera) {
+                this.cameraEntity = entities[i];
+                console.log("📷 Found camera entity:", this.cameraEntity.name);
+                break;
+            }
+        }
+    }
     
     if (!this.simulationEntity) {
         console.error("Could not find EulerContainer entity");
@@ -37,8 +50,18 @@ EulerUIController.prototype.initialize = function() {
     // Get audio manager
     this.audioManager = this.audioEntity ? this.audioEntity.script.eulerAudioManager : null;
     
-    // Get camera controller
-    this.cameraController = this.cameraEntity ? this.cameraEntity.script.mainCameraController : null;
+    // Get camera controller (with fallback)
+    this.cameraController = null;
+    if (this.cameraEntity && this.cameraEntity.script) {
+        this.cameraController = this.cameraEntity.script.mainCameraController || this.cameraEntity.script.MainCameraController;
+        if (this.cameraController) {
+            console.log("📷 Found camera controller");
+        } else {
+            console.warn("⚠️ Camera entity found but no camera controller script");
+        }
+    } else {
+        console.warn("⚠️ No camera entity found - camera controls will be disabled");
+    }
     
     // Initialize waveform animation control
     this.isWaveformAnimating = false;

@@ -12,15 +12,6 @@ HomeScreen.prototype.initialize = function() {
     // Load Roboto font from Google Fonts
     this.loadRobotoFont();
     
-    // Get reference to app manager
-    this.appManager = this.app.root.findByName('AppManager');
-    if (this.appManager && this.appManager.script && this.appManager.script.AppManager) {
-        this.appManager = this.appManager.script.AppManager;
-    } else {
-        console.error("Could not find AppManager");
-        return;
-    }
-    
     // State
     this.isActive = false;
     this.homeContainer = null;
@@ -34,8 +25,25 @@ HomeScreen.prototype.initialize = function() {
     this.autoRotateSpeed = 1.0; // degrees per frame
     this.rotationInterval = null;
     
-    // Don't auto-activate, wait for AppManager to call activate()
+    // Get reference to app manager (will be set when needed)
+    this.appManager = null;
+    
     console.log("✅ Home Screen setup complete");
+};
+
+// Get AppManager reference when needed
+HomeScreen.prototype.getAppManager = function() {
+    if (!this.appManager) {
+        this.appManager = this.app.root.findByName('AppManager');
+        if (this.appManager && this.appManager.script && this.appManager.script.AppManager) {
+            this.appManager = this.appManager.script.AppManager;
+            console.log("✅ AppManager reference found");
+        } else {
+            console.warn("⚠️ AppManager not found yet");
+            return null;
+        }
+    }
+    return this.appManager;
 };
 
 // Load Roboto font from Google Fonts
@@ -74,19 +82,25 @@ HomeScreen.prototype.activate = function() {
 
 // Deactivate home screen
 HomeScreen.prototype.deactivate = function() {
-    if (!this.isActive) return;
+    if (!this.isActive) {
+        console.log("🏠 HomeScreen already inactive, skipping deactivation");
+        return;
+    }
     
-    console.log("🏠 Deactivating Home Screen");
+    console.log("🏠 Deactivating Home Screen...");
     
     // Stop animations
+    console.log("🛑 Stopping HomeScreen animations...");
     this.stopAnimations();
     
     // Icons are static - no rotation to stop
     
     // Remove UI
+    console.log("🗑️ Removing HomeScreen UI...");
     this.removeHomeUI();
     
     this.isActive = false;
+    console.log("✅ Home Screen deactivated successfully");
 };
 
 // Create the home screen UI
@@ -379,15 +393,18 @@ HomeScreen.prototype.createModeCard = function(config) {
     // Click handler
     card.addEventListener('click', () => {
         console.log(`🎯 Card clicked: ${config.mode}`);
-        console.log("🔍 AppManager reference:", this.appManager);
+        
+        // Get AppManager reference
+        const appManager = this.getAppManager();
+        console.log("🔍 AppManager reference:", appManager);
         
         // Add click animation
         card.style.transform = 'scale(0.95)';
         
         setTimeout(() => {
-            if (this.appManager) {
+            if (appManager) {
                 console.log(`🚀 Calling switchMode('${config.mode}')`);
-                this.appManager.switchMode(config.mode);
+                appManager.switchMode(config.mode);
             } else {
                 console.error("❌ AppManager reference is null!");
             }
@@ -537,6 +554,10 @@ HomeScreen.prototype.create3DIcon = function(iconType, container) {
     }
     
     // Store reference for animation
+    if (!this.iconObjects) {
+        console.warn("⚠️ iconObjects is undefined, initializing...");
+        this.iconObjects = [];
+    }
     this.iconObjects.push({
         element: icon3D.firstChild, // This will be the sphereContainer or cube
         type: iconType,
