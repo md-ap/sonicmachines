@@ -478,9 +478,9 @@ AppManager.prototype.enableMarchingCubesMode = function() {
         console.log(`📷 Camera position before FORCE reset: (${oldPos.x.toFixed(2)}, ${oldPos.y.toFixed(2)}, ${oldPos.z.toFixed(2)})`);
         
         // CRITICAL: Disable any Euler camera controller first
-        if (camera.script && camera.script.eulerCameraController) {
-            camera.script.eulerCameraController.enabled = false;
-            console.log("📷 Euler camera controller disabled");
+        if (camera.script && camera.script.mainCameraController) {
+            camera.script.mainCameraController.uiBlocked = true;
+            console.log("📷 Main camera controller UI blocked");
         }
         
         // Force camera to optimal marching cubes viewing position - HARD RESET
@@ -956,13 +956,13 @@ AppManager.prototype.forceStopEulerSystems = function() {
     
     // Stop Euler camera controller
     const cameraEntity = this.app.root.findByName('Camera');
-    if (cameraEntity && cameraEntity.script && cameraEntity.script.eulerCameraController) {
+    if (cameraEntity && cameraEntity.script && cameraEntity.script.mainCameraController) {
         try {
-            const cameraController = cameraEntity.script.eulerCameraController;
-            cameraController.enabled = false;
+            const cameraController = cameraEntity.script.mainCameraController;
+            cameraController.uiBlocked = true;
             // Stop auto rotation
             cameraController.autoRotate = false;
-            console.log("🛑 Euler camera controller stopped");
+            console.log("🛑 Main camera controller UI blocked");
         } catch (error) {
             console.warn("Warning stopping Euler camera:", error);
         }

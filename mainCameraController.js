@@ -35,6 +35,10 @@ MainCameraController.prototype.initialize = function() {
     this.autoRotateSpeed = 1.0;
     this.lastMode = null;
     
+    // Properties for Euler UI controller
+    this.targetDistance = this.getDefaultDistance();
+    this.distance = this.getDefaultDistance();
+    
     this.setupEventListeners();
     this.updateCameraForMode();
     
@@ -300,6 +304,9 @@ MainCameraController.prototype.updateCameraPosition = function() {
     this.pitch = pc.math.lerp(this.pitch, this.targetPitch, lerpFactor);
     this.yaw = pc.math.lerp(this.yaw, this.targetYaw, lerpFactor);
     this.currentDistance = pc.math.lerp(this.currentDistance, this.targetDistance, lerpFactor);
+    
+    // Update distance property for Euler UI controller
+    this.distance = this.currentDistance;
     
     const pitchRad = this.pitch * pc.math.DEG_TO_RAD;
     const yawRad = this.yaw * pc.math.DEG_TO_RAD;

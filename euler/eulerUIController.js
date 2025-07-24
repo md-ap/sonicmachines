@@ -38,7 +38,7 @@ EulerUIController.prototype.initialize = function() {
     this.audioManager = this.audioEntity ? this.audioEntity.script.eulerAudioManager : null;
     
     // Get camera controller
-    this.cameraController = this.cameraEntity ? this.cameraEntity.script.eulerCameraController : null;
+    this.cameraController = this.cameraEntity ? this.cameraEntity.script.mainCameraController : null;
     
     // Initialize waveform animation control
     this.isWaveformAnimating = false;
@@ -145,7 +145,7 @@ EulerUIController.prototype.createOriginalStyleUI = function() {
     this.addControl(controlsContainer, 'limitConnections', 'Limit Connections', 'checkbox', true);
     this.addControl(controlsContainer, 'maxConnections', 'Max Connections', 'range', 10, { min: 0, max: 30, step: 1 });
     this.addControl(controlsContainer, 'particleCount', 'Particle Count', 'range', 500, { min: 0, max: 1000, step: 1 });
-    this.addControl(controlsContainer, 'cameraDistance', 'Camera Distance', 'range', 1750, { min: 1000, max: 6000, step: 50 });
+    this.addControl(controlsContainer, 'cameraDistance', 'Camera Distance', 'range', 35, { min: 10, max: 100, step: 1 });
     this.addControl(controlsContainer, 'rotationSpeed', 'Rotation Speed', 'range', 0.3, { min: 0.1, max: 1.0, step: 0.1 });
     this.addControl(controlsContainer, 'rootMidi', 'Root MIDI (C1-B5)', 'range', 60, { min: 24, max: 83, step: 1 });
     
@@ -176,7 +176,7 @@ EulerUIController.prototype.createOriginalStyleUI = function() {
         limitConnections: true,
         maxConnections: 10,
         particleCount: 500,
-        cameraDistance: 1750,
+        cameraDistance: 35,
         rotationSpeed: 0.3,
         rootMidi: 60,
         scale: 'Major',
@@ -348,8 +348,8 @@ EulerUIController.prototype.updateParameter = function(property, value) {
                 break;
             case 'cameraDistance':
                 if (this.cameraController) {
-                    this.cameraController.targetDistance = value / 50; // Convert to simulation scale
-                    this.cameraController.distance = value / 50;
+                    this.cameraController.targetDistance = value;
+                    this.cameraController.distance = value;
                 }
                 break;
             case 'rotationSpeed':
@@ -713,28 +713,10 @@ EulerUIController.prototype.updateBlendViz = function(v1, v2, v3, v4) {
     ctx.fillText('DUO', this.blendCanvas.width-30, this.blendCanvas.height-5);
 };
 
-// Setup camera controls that don't interfere with UI
+// Setup camera controls
 EulerUIController.prototype.setupCameraControls = function() {
-    this.isMouseOverUI = false;
-    
-    // Track mouse over UI elements
-    const uiElements = [this.guiContainer, this.audioControls, this.waveformCanvas, this.blendCanvas];
-    uiElements.forEach(element => {
-        if (element) {
-            element.addEventListener('mouseenter', () => {
-                this.isMouseOverUI = true;
-                if (this.cameraController) {
-                    this.cameraController.uiBlocked = true;
-                }
-            });
-            element.addEventListener('mouseleave', () => {
-                this.isMouseOverUI = false;
-                if (this.cameraController) {
-                    this.cameraController.uiBlocked = false;
-                }
-            });
-        }
-    });
+    // Camera controls are now always active
+    console.log("🎮 Camera controls setup complete");
 };
 
 // Complete cleanup method (called by AppManager on mode switch)
